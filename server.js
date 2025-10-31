@@ -24,9 +24,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 // const messageRoutes = require('./routes/messageRoutes'); // إزالة استيراد مسارات الرسائل
 
 
-// --- إعدادات الأمان والوسيط (Security & Middlewares) ---
 const corsOptions = {
-  // تأكد من أن هذا يطابق عنوان الفرونت اند
   origin: process.env.FRONTEND_URL || 'http://localhost:5001', // أو العنوان الذي يستخدمه Vite
   credentials: true, // السماح بإرسال الكوكيز
 };

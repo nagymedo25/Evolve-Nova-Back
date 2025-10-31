@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'puls-academy-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'; // صلاحية توكن JWT
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 const hashPassword = async (password) => {
     try {
@@ -25,15 +25,13 @@ const comparePassword = async (password, hashedPassword) => {
     }
 };
 
-// تم تعديل هذه الدالة لتتضمن sessionId (توكن الجلسة UUID)
 const generateToken = (user, sessionId) => {
        try {
-        // نضع فقط البيانات الأساسية اللازمة للتحقق من المستخدم والجلسة في التوكن
         const payload = {
             userId: user.user_id,
-            email: user.email, // Keep email for potential identification
+            email: user.email,
             role: user.role,
-            sessionId: sessionId, // Add the session UUID here
+            sessionId: sessionId,
         };
 
         const token = jwt.sign(payload, JWT_SECRET, {
@@ -50,17 +48,12 @@ const generateToken = (user, sessionId) => {
 const verifyToken = (token) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        return decoded; // Contains userId, email, role, sessionId, iat, exp
+        return decoded;
     } catch (error) {
-        // لا نطبع الخطأ هنا بالضرورة، قد يكون توكن منتهي الصلاحية فقط
-        // console.error('Error verifying token:', error);
-        throw error; // Let the caller (e.g., authMiddleware) handle specific errors
+        throw error;
     }
 };
 
-// تم إزالة generateRefreshToken, isAdmin, isStudent, canAccessCourse, canModifyUser
-
-// دالة محدثة لإنشاء بيانات المستخدم الآمنة للعرض
 const createSafeUserData = (user) => {
     if (!user) return null;
     return {
@@ -69,18 +62,13 @@ const createSafeUserData = (user) => {
         email: user.email,
         role: user.role,
         created_at: user.created_at,
-        status: user.status // Keep status for frontend UI logic if needed
+        status: user.status
     };
 };
 
-// تبقى دالة التحقق من قوة كلمة المرور كما هي
 const validatePasswordStrength = (password) => {
     const minLength = 8;
-    // تبسيط الشروط: طول فقط ورقم واحد على الأقل
-    // const hasUpperCase = /[A-Z]/.test(password);
-    // const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
-    // const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
     if (!password || password.length < minLength) {
         return {
@@ -89,26 +77,12 @@ const validatePasswordStrength = (password) => {
         };
     }
 
-    // if (!hasUpperCase || !hasLowerCase) {
-    //     return {
-    //         isValid: false,
-    //         message: 'كلمة المرور يجب أن تحتوي على أحرف كبيرة وصغيرة'
-    //     };
-    // }
-
     if (!hasNumbers) {
         return {
             isValid: false,
             message: 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل'
         };
     }
-
-    // if (!hasSpecialChar) {
-    //     return {
-    //         isValid: false,
-    //         message: 'كلمة المرور يجب أن تحتوي على رموز خاصة'
-    //     };
-    // }
 
     return {
         isValid: true,
@@ -121,8 +95,8 @@ module.exports = {
     comparePassword,
     generateToken,
     verifyToken,
-    createSafeUserData, // Updated function
-    validatePasswordStrength, // Simplified validation
+    createSafeUserData,
+    validatePasswordStrength,
     JWT_SECRET,
     JWT_EXPIRES_IN
 };

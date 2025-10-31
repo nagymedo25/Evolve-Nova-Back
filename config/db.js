@@ -12,9 +12,8 @@ const pool = new Pool({
 const createTables = async () => {
   const client = await pool.connect();
   try {
-    await client.query(`DROP TABLE IF EXISTS Users CASCADE`);
     await client.query(`
-      CREATE TABLE Users (
+      CREATE TABLE IF NOT EXISTS Users (
           user_id SERIAL PRIMARY KEY,
           name TEXT NOT NULL,
           email TEXT UNIQUE NOT NULL,
@@ -25,13 +24,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS UserDevices CASCADE`);
-    await client.query(`DROP TABLE IF EXISTS DeviceLoginRequests CASCADE`);
-    await client.query(`DROP TABLE IF EXISTS Violations CASCADE`);
-
-    await client.query(`DROP TABLE IF EXISTS ActiveSessions CASCADE`);
     await client.query(`
-      CREATE TABLE ActiveSessions (
+      CREATE TABLE IF NOT EXISTS ActiveSessions (
         session_id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
         session_token TEXT NOT NULL UNIQUE,
@@ -39,9 +33,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS Courses CASCADE`);
     await client.query(`
-      CREATE TABLE Courses (
+      CREATE TABLE IF NOT EXISTS Courses (
           course_id SERIAL PRIMARY KEY,
           title TEXT NOT NULL,
           description TEXT,
@@ -65,9 +58,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS Lessons CASCADE`);
     await client.query(`
-      CREATE TABLE Lessons (
+      CREATE TABLE IF NOT EXISTS Lessons (
           lesson_id SERIAL PRIMARY KEY,
           course_id INTEGER NOT NULL REFERENCES Courses(course_id) ON DELETE CASCADE,
           title TEXT NOT NULL,
@@ -79,9 +71,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS Payments CASCADE`);
     await client.query(`
-      CREATE TABLE Payments (
+      CREATE TABLE IF NOT EXISTS Payments (
           payment_id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
           course_id INTEGER NOT NULL REFERENCES Courses(course_id) ON DELETE CASCADE,
@@ -94,9 +85,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS Enrollments CASCADE`);
     await client.query(`
-      CREATE TABLE Enrollments (
+      CREATE TABLE IF NOT EXISTS Enrollments (
           enrollment_id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
           course_id INTEGER NOT NULL REFERENCES Courses(course_id) ON DELETE CASCADE,
@@ -107,9 +97,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS Notifications CASCADE`);
     await client.query(`
-      CREATE TABLE Notifications (
+      CREATE TABLE IF NOT EXISTS Notifications (
           notification_id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
           message TEXT NOT NULL,
@@ -118,9 +107,8 @@ const createTables = async () => {
       )
     `);
 
-    await client.query(`DROP TABLE IF EXISTS Messages CASCADE`);
     await client.query(`
-      CREATE TABLE Messages (
+      CREATE TABLE IF NOT EXISTS Messages (
           message_id SERIAL PRIMARY KEY,
           sender_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
           receiver_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
