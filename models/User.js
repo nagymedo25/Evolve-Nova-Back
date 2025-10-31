@@ -1,0 +1,241 @@
+const { db } = require("../config/db");
+const { hashPassword, comparePassword } = require("../config/auth");
+const { v4: uuidv4 } = require('uuid');
+
+// دالة مبسطة لإرجاع بيانات المستخدم الآمنة
+const createSafeUserData = (user) => {
+  if (!user) return null;
+  return {
+    user_id: user.user_id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    created_at: user.created_at,
+    status: user.status
+  };
+};
+
+class User {
+  static async create(userData) {
+    const { name, email, password } = userData;
+    const password_hash = await hashPassword(password);
+    const sql = `
+      INSERT INTO Users (name, email, password_hash)
+      VALUES ($1, $2, $3)
+      RETURNING user_id
+    `;
+    try {
+      const result = await db.query(sql, [name, email, password_hash]);
+      return User.findById(result.rows[0].user_id);
+    } catch (error) {
+      if (error.code === '23505') {
+        throw new Error("البريد الإلكتروني مسجل بالفعل");
+      }
+      throw error;
+    }
+  }
+
+  static async findById(userId) {
+    const sql = "SELECT user_id, name, email, role, created_at, status FROM Users WHERE user_id = $1";
+    const result = await db.query(sql, [userId]);
+    return createSafeUserData(result.rows[0]); // Return safe data or null
+  }
+
+  static async findByEmail(email) {
+    // نحتاج لجلب password_hash هنا للمقارنة في تسجيل الدخول
+    const sql = "SELECT * FROM Users WHERE email = $1";
+    const result = await db.query(sql, [email]);
+    return result.rows[0]; // Return full user data including hash, or undefined
+  }
+
+  // تم إزالة findByPhone
+
+  static async login(email, password) {
+    const user = await this.findByEmail(email);
+
+    if (!user) {
+      throw new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+    }
+
+    const isPasswordValid = await comparePassword(password, user.password_hash);
+    if (!isPasswordValid) {
+      throw new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+    }
+
+    if (user.status === 'suspended') {
+      throw new Error("هذا الحساب معلق.");
+    }
+
+    // حذف أي جلسة قديمة وإنشاء جلسة جديدة
+    await this.deleteSession(user.user_id);
+    const sessionToken = await this.createSession(user.user_id);
+
+    return {
+      status: 'success',
+      message: 'تم تسجيل الدخول بنجاح',
+      user: createSafeUserData(user),
+      token: sessionToken, // This is the session token (UUID)
+    };
+  }
+
+  static async createSession(userId) {
+    const sessionToken = uuidv4();
+    // لا نحفظ بصمة الجهاز
+    await db.query(
+      'INSERT INTO ActiveSessions (user_id, session_token) VALUES ($1, $2)',
+      [userId, sessionToken]
+    );
+    return sessionToken;
+  }
+
+  static async getActiveSessionByToken(sessionToken) {
+    const result = await db.query('SELECT * FROM ActiveSessions WHERE session_token = $1', [sessionToken]);
+    return result.rows[0];
+  }
+
+  static async deleteSession(userId) {
+    // يمكن حذف الجلسة بناءً على user_id
+    await db.query('DELETE FROM ActiveSessions WHERE user_id = $1', [userId]);
+  }
+
+  static async deleteSessionByToken(sessionToken) {
+      await db.query('DELETE FROM ActiveSessions WHERE session_token = $1', [sessionToken]);
+  }
+
+  // تم إزالة isDeviceApproved, createDeviceLoginRequest, recordViolation, getViolators, suspend, reactivate
+
+
+  static async update(userId, userData) {
+    const { name, email, password } = userData;
+    const updates = [];
+    const values = [];
+    let queryIndex = 1;
+
+    if (name !== undefined) {
+      updates.push(`name = $${queryIndex++}`);
+      values.push(name);
+    }
+    if (email !== undefined) {
+      updates.push(`email = $${queryIndex++}`);
+      values.push(email);
+    }
+    // لا نحدث الهاتف، الكلية، أو الجنس هنا
+    if (password) {
+      const password_hash = await hashPassword(password);
+      updates.push(`password_hash = $${queryIndex++}`);
+      values.push(password_hash);
+    }
+
+    if (updates.length === 0) {
+      // Allow updating only status via updateStatus method
+      const currentUserData = await this.findById(userId);
+      if (!currentUserData) throw new Error("المستخدم غير موجود");
+      return currentUserData; // Return existing data if nothing else changed
+    }
+
+
+    values.push(userId);
+    const sql = `UPDATE Users SET ${updates.join(", ")} WHERE user_id = $${queryIndex} RETURNING user_id`;
+
+    try {
+      const result = await db.query(sql, values);
+      if (result.rows.length === 0) {
+        throw new Error("المستخدم غير موجود");
+      }
+      return User.findById(result.rows[0].user_id);
+    } catch (error) {
+      if (error.code === '23505') {
+        throw new Error("البريد الإلكتروني مسجل بالفعل");
+      }
+      throw error;
+    }
+  }
+
+  // دالة لتحديث الحالة فقط (للأدمن)
+  static async updateStatus(userId, status) {
+    if (!['active', 'suspended'].includes(status)) {
+        throw new Error('الحالة غير صالحة.');
+    }
+    const sql = `UPDATE Users SET status = $1 WHERE user_id = $2 RETURNING user_id`;
+    const result = await db.query(sql, [status, userId]);
+    if (result.rowCount === 0) {
+        throw new Error("المستخدم غير موجود");
+    }
+    // إذا تم تعليق المستخدم، احذف جلساته النشطة
+    if (status === 'suspended') {
+        await this.deleteSession(userId);
+    }
+    return User.findById(result.rows[0].user_id);
+  }
+
+
+  static async changePassword(userId, currentPassword, newPassword) {
+    // نحتاج لجلب المستخدم كاملاً بما فيه password_hash
+    const userResult = await db.query("SELECT * FROM Users WHERE user_id = $1", [userId]);
+    if (userResult.rows.length === 0) {
+      throw new Error("المستخدم غير موجود");
+    }
+    const user = userResult.rows[0];
+
+    const isCurrentPasswordValid = await comparePassword(
+      currentPassword,
+      user.password_hash
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new Error("كلمة المرور الحالية غير صحيحة");
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    const sql = "UPDATE Users SET password_hash = $1 WHERE user_id = $2";
+    await db.query(sql, [newPasswordHash, userId]);
+    // حذف الجلسة الحالية لإجبار المستخدم على تسجيل الدخول مجدداً
+    await this.deleteSession(userId);
+    return { message: "تم تغيير كلمة المرور بنجاح" };
+  }
+
+  static async delete(userId) {
+    // الحذف سيشمل حذف الجلسات تلقائياً بسبب ON DELETE CASCADE
+    const sql = "DELETE FROM Users WHERE user_id = $1";
+    const result = await db.query(sql, [userId]);
+    if (result.rowCount === 0) {
+      throw new Error("المستخدم غير موجود");
+    }
+    return { message: "تم حذف المستخدم بنجاح" };
+  }
+
+  static async getAll(limit = 50, offset = 0) {
+    // إرجاع الحقول المبسطة
+    const sql = `
+        SELECT user_id, name, email, role, created_at, status
+        FROM Users
+        WHERE role = 'student'
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2
+        `;
+    const result = await db.query(sql, [limit, offset]);
+    return result.rows; // البيانات بالفعل آمنة لأننا لم نطلب password_hash
+  }
+
+  static async getCount() {
+    const sql = "SELECT COUNT(*) as total FROM Users WHERE role = 'student'";
+    const result = await db.query(sql);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async search(query, limit = 20) {
+    // البحث في الحقول المبسطة
+    const sql = `
+        SELECT user_id, name, email, role, created_at, status
+        FROM Users
+        WHERE (name ILIKE $1 OR email ILIKE $1) AND role = 'student' -- إزالة البحث بالهاتف
+        ORDER BY created_at DESC
+        LIMIT $2
+        `;
+    const searchTerm = `%${query}%`;
+    const result = await db.query(sql, [searchTerm, limit]);
+    return result.rows;
+  }
+}
+
+module.exports = User;
