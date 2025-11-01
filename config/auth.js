@@ -67,26 +67,50 @@ const createSafeUserData = (user) => {
 };
 
 const validatePasswordStrength = (password) => {
-    const minLength = 8;
-    const hasNumbers = /\d/.test(password);
+    if (!password) {
+        return { isValid: false, message: 'كلمة المرور مطلوبة' };
+    }
 
-    if (!password || password.length < minLength) {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    if (password.length < minLength) {
         return {
             isValid: false,
             message: `كلمة المرور يجب أن تكون ${minLength} أحرف على الأقل`
         };
     }
-
+    if (!hasLowerCase) {
+        return {
+            isValid: false,
+            message: 'كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل (a-z)'
+        };
+    }
+    if (!hasUpperCase) {
+        return {
+            isValid: false,
+            message: 'كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل (A-Z)'
+        };
+    }
     if (!hasNumbers) {
         return {
             isValid: false,
-            message: 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل'
+            message: 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل (0-9)'
+        };
+    }
+    if (!hasSpecialChar) {
+        return {
+            isValid: false,
+            message: 'كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل (مثل: !@#$%^&*)'
         };
     }
 
     return {
         isValid: true,
-        message: 'كلمة المرور مقبولة'
+        message: 'كلمة المرور قوية'
     };
 };
 

@@ -1,6 +1,8 @@
 const Course = require("../models/Course");
 const Lesson = require("../models/Lesson");
 const Enrollment = require("../models/Enrollment");
+const Review = require("../models/Review"); // <-- 1. استيراد مودل التقييم
+const { getYoutubeEmbedUrl } = require("../utils/helpers");
 
 class CourseController {
   static async getAllCourses(req, res) {
@@ -130,17 +132,19 @@ class CourseController {
   static async addLessonToCourse(req, res) {
     try {
       const { courseId } = req.params;
-      const { title, description, video_url, duration, order_index } = req.body;
+      let { title, description, video_url, duration, order_index } = req.body;
 
       if (!title || !video_url) {
          return res.status(400).json({ error: 'عنوان الدرس ورابط الفيديو مطلوبان' });
       }
+      
+      const formattedVideoUrl = getYoutubeEmbedUrl(video_url);
 
       const newLesson = await Lesson.create({
         course_id: parseInt(courseId),
         title,
         description,
-        video_url: video_url,
+        video_url: formattedVideoUrl,
         duration,
         order_index
       });
@@ -155,6 +159,10 @@ class CourseController {
     try {
       const { lessonId } = req.params;
       const lessonDataToUpdate = { ...req.body };
+      
+      if (lessonDataToUpdate.video_url) {
+          lessonDataToUpdate.video_url = getYoutubeEmbedUrl(lessonDataToUpdate.video_url);
+      }
 
       const updatedLesson = await Lesson.update(lessonId, lessonDataToUpdate);
 
@@ -225,6 +233,55 @@ class CourseController {
       res.json({ lessons });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+  
+  // --- ✨ دوال جديدة: للتقييمات ✨ ---
+  static async getCourseReviews(req, res) {
+    try {
+      const { courseId } = req.params;
+      const reviews = await Review.findByCourseId(courseId);
+      res.json({ reviews });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+  
+  static async createReview(req, res) {
+    try {
+      const { courseId } = req.params;
+      const { rating, comment } = req.body;
+      const userId = req.user.user_id;
+
+      // 1. التأكد أن الطالب مسجل ومقبول
+      const enrollment = await Enrollment.findByUserAndCourse(userId, courseId);
+      if (!enrollment || enrollment.status !== 'active') {
+        return res.status(403).json({ error: 'يجب أن تكون مسجلاً في الكورس لتقييمه' });
+      }
+
+      // 2. التأكد أنه لم يقيم الكورس من قبل
+      const existingReview = await Review.findByUserAndCourse(userId, courseId);
+      if (existingReview) {
+        return res.status(409).json({ error: 'لقد قمت بتقييم هذا الكورس بالفعل' });
+      }
+
+      // 3. إنشاء التقييم
+      const newReview = await Review.create({
+        user_id: userId,
+        course_id: parseInt(courseId),
+        rating: parseInt(rating),
+        comment
+      });
+      
+      // 4. إعادة حساب متوسط تقييم الكورس
+      await Course.recalculateRating(courseId);
+
+      res.status(201).json({ message: 'تم إضافة تقييمك بنجاح', review: newReview });
+    } catch (error) {
+      if (error.code === '23505') { // خطأ تكرار (رغم أننا تحققنا)
+          return res.status(409).json({ error: 'لقد قمت بتقييم هذا الكورس بالفعل' });
+      }
+      res.status(400).json({ error: error.message });
     }
   }
 }

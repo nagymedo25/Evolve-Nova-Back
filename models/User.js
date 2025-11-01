@@ -168,6 +168,16 @@ class User {
     return User.findById(result.rows[0].user_id);
   }
 
+  static async getStats() {
+    // جلب إحصائيات الطلاب (مثل getCount ولكن يرجع كائن)
+    const sql = "SELECT COUNT(*) as total FROM Users WHERE role = 'student'";
+    const result = await db.query(sql);
+    return {
+      total: parseInt(result.rows[0].total, 10)
+      // يمكنك إضافة إحصائيات أخرى هنا مستقبلاً
+    };
+  }
+
 
   static async changePassword(userId, currentPassword, newPassword) {
     // نحتاج لجلب المستخدم كاملاً بما فيه password_hash

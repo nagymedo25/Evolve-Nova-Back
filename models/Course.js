@@ -186,7 +186,7 @@ class Course {
     return result.rows[0];
   }
 
-  static async getTopSelling(limit = 10) {
+static async getTopSelling(limit = 10) {
     const sql = `
       SELECT c.course_id, c.title, c.thumbnail_url, c.price, c.instructor, c.rating,
              COUNT(e.enrollment_id) as enrollment_count
@@ -198,6 +198,40 @@ class Course {
     `;
     const result = await db.query(sql, [limit]);
     return result.rows;
+  }
+  
+  // --- ✨ دالة جديدة: لإعادة حساب التقييم ✨ ---
+  static async recalculateRating(courseId) {
+    try {
+      const statsSql = `
+        SELECT 
+          COUNT(*) as reviews_count, 
+          AVG(rating) as average_rating 
+        FROM Reviews 
+        WHERE course_id = $1
+      `;
+      const statsResult = await db.query(statsSql, [courseId]);
+      
+      if (statsResult.rows.length > 0) {
+        const stats = statsResult.rows[0];
+        const newRating = stats.average_rating ? parseFloat(stats.average_rating) : 0;
+        const newReviewsCount = stats.reviews_count ? parseInt(stats.reviews_count) : 0;
+
+        const updateSql = `
+          UPDATE Courses 
+          SET 
+            rating = $1, 
+            reviews_count = $2 
+          WHERE course_id = $3
+        `;
+        await db.query(updateSql, [newRating, newReviewsCount, courseId]);
+        
+        return { rating: newRating, reviews_count: newReviewsCount };
+      }
+    } catch (error) {
+      console.error(`Error recalculating rating for course ${courseId}:`, error);
+      throw error;
+    }
   }
 }
 

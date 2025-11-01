@@ -288,6 +288,32 @@ const validateUserUpdate = (req, res, next) => {
       }
 };
 
+// --- ✨ دالة جديدة: التحقق من التقييم ✨ ---
+const validateReviewCreation = (req, res, next) => {
+    try {
+        const { rating, comment } = req.body;
+
+        if (!rating) {
+            return res.status(400).json({ error: 'التقييم (rating) مطلوب' });
+        }
+        
+        const numericRating = parseInt(rating);
+        if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+             return res.status(400).json({ error: 'التقييم يجب أن يكون رقماً بين 1 و 5' });
+        }
+
+        if (comment && typeof comment !== 'string') {
+             return res.status(400).json({ error: 'التعليق يجب أن يكون نصاً' });
+        }
+
+        next();
+    } catch (error) {
+        console.error("Validation Error (Review Create):", error);
+        res.status(500).json({ error: "خطأ في التحقق من بيانات التقييم" });
+    }
+};
+// --- نهاية الدالة الجديدة ---
+
 module.exports = {
   validateRegistration,
   validateLogin,
@@ -300,4 +326,5 @@ module.exports = {
   validateLessonUpdate,
   validateUserUpdate,
   validateCourseUpdate,
+  validateReviewCreation, 
 };
