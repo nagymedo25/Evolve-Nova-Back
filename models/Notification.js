@@ -1,4 +1,4 @@
-// puls-academy-backend/models/Notification.js
+
 
 const { db } = require('../config/db');
 

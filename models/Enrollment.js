@@ -1,4 +1,4 @@
-// puls-academy-backend/models/Enrollment.js
+
 
 const { db } = require("../config/db");
 

@@ -1,4 +1,4 @@
-// nagymedo25/evolve-nova-back/Evolve-Nova-Back-b8017c9f0eeb956febe162d6f0395729f58d83bf/models/Review.js
+
 
 const { db } = require("../config/db");
 

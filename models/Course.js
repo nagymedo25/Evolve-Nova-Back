@@ -199,8 +199,7 @@ static async getTopSelling(limit = 10) {
     const result = await db.query(sql, [limit]);
     return result.rows;
   }
-  
-  // --- ✨ دالة جديدة: لإعادة حساب التقييم ✨ ---
+
   static async recalculateRating(courseId) {
     try {
       const statsSql = `

@@ -1,7 +1,6 @@
-// scripts/clear-users.js
+
 const { db } = require('../config/db');
 
-// هذا السطر يحذف الطلاب فقط
 const sql = "DELETE FROM Users WHERE role = 'student';";
 
 db.run(sql, [], function(err) {

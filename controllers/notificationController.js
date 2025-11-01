@@ -1,4 +1,4 @@
-// puls-academy-backend/controllers/notificationController.js
+
 
 const Notification = require('../models/Notification');
 

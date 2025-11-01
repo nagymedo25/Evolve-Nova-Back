@@ -96,8 +96,7 @@ const createTables = async () => {
           UNIQUE(user_id, course_id)
       )
     `);
-    
-    // --- ✨ كود جديد: جدول التقييمات ✨ ---
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS Reviews (
           review_id SERIAL PRIMARY KEY,
@@ -109,7 +108,7 @@ const createTables = async () => {
           UNIQUE(course_id, user_id) -- منع الطالب من تقييم الكورس أكثر من مرة
       )
     `);
-    // --- نهاية الكود الجديد ---
+
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS Notifications (

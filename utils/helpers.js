@@ -1,4 +1,4 @@
-// puls-academy-backend/utils/helpers.js
+
 const axios = require("axios");
 
 const generateRandomCode = (length = 6) => {
@@ -155,43 +155,38 @@ const debounce = (func, wait) => {
   };
 };
 
-// دالة جديدة لاستخراج رابط التضمين (embed) من أي رابط يوتيوب
 const getYoutubeEmbedUrl = (url) => {
   if (typeof url !== 'string' || !url.trim()) return url;
 
-  // إذا كان الرابط بالفعل بتنسيق embed، قم بإرجاعه كما هو
   if (url.includes('youtube.com/embed/')) {
     return url;
   }
 
-  // Regex لاستخراج videoId من الصيغ المختلفة
-  // يدعم:
-  // 1. https://www.youtube.com/watch?v=VIDEO_ID
-  // 2. https://youtu.be/VIDEO_ID
-  // 3. https://www.youtube.com/v/VIDEO_ID
+
+
+
+
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
   const match = url.match(youtubeRegex);
 
   if (match && match[1]) {
     const videoId = match[1];
-    
-    // محاولة الحفاظ على بارامترات الرابط (مثل ?si=)
+
     let queryParams = '';
     try {
       const urlObj = new URL(url);
-      // نحافظ فقط على بارامتر 'si' لأنه شائع في روابط المشاركة
+
       const si = urlObj.searchParams.get('si');
       if (si) {
         queryParams = `?si=${si}`;
       }
     } catch (e) {
-      // تجاهل الخطأ (قد يكون الرابط غير كامل)
+
     }
     
     return `https://www.youtube.com/embed/${videoId}${queryParams}`;
   }
-  
-  // إذا لم يكن رابط يوتيوب صالح، أرجعه كما هو
+
   return url;
 };
 

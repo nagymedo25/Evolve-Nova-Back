@@ -1,7 +1,7 @@
 const Course = require("../models/Course");
 const Lesson = require("../models/Lesson");
 const Enrollment = require("../models/Enrollment");
-const Review = require("../models/Review"); // <-- 1. استيراد مودل التقييم
+const Review = require("../models/Review"); 
 const { getYoutubeEmbedUrl } = require("../utils/helpers");
 
 class CourseController {
@@ -235,8 +235,7 @@ class CourseController {
       res.status(500).json({ error: error.message });
     }
   }
-  
-  // --- ✨ دوال جديدة: للتقييمات ✨ ---
+
   static async getCourseReviews(req, res) {
     try {
       const { courseId } = req.params;
@@ -253,32 +252,28 @@ class CourseController {
       const { rating, comment } = req.body;
       const userId = req.user.user_id;
 
-      // 1. التأكد أن الطالب مسجل ومقبول
       const enrollment = await Enrollment.findByUserAndCourse(userId, courseId);
       if (!enrollment || enrollment.status !== 'active') {
         return res.status(403).json({ error: 'يجب أن تكون مسجلاً في الكورس لتقييمه' });
       }
 
-      // 2. التأكد أنه لم يقيم الكورس من قبل
       const existingReview = await Review.findByUserAndCourse(userId, courseId);
       if (existingReview) {
         return res.status(409).json({ error: 'لقد قمت بتقييم هذا الكورس بالفعل' });
       }
 
-      // 3. إنشاء التقييم
       const newReview = await Review.create({
         user_id: userId,
         course_id: parseInt(courseId),
         rating: parseInt(rating),
         comment
       });
-      
-      // 4. إعادة حساب متوسط تقييم الكورس
+
       await Course.recalculateRating(courseId);
 
       res.status(201).json({ message: 'تم إضافة تقييمك بنجاح', review: newReview });
     } catch (error) {
-      if (error.code === '23505') { // خطأ تكرار (رغم أننا تحققنا)
+      if (error.code === '23505') { 
           return res.status(409).json({ error: 'لقد قمت بتقييم هذا الكورس بالفعل' });
       }
       res.status(400).json({ error: error.message });

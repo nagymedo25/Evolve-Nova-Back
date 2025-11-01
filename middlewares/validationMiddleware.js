@@ -288,7 +288,6 @@ const validateUserUpdate = (req, res, next) => {
       }
 };
 
-// --- ✨ دالة جديدة: التحقق من التقييم ✨ ---
 const validateReviewCreation = (req, res, next) => {
     try {
         const { rating, comment } = req.body;
@@ -312,7 +311,7 @@ const validateReviewCreation = (req, res, next) => {
         res.status(500).json({ error: "خطأ في التحقق من بيانات التقييم" });
     }
 };
-// --- نهاية الدالة الجديدة ---
+
 
 module.exports = {
   validateRegistration,

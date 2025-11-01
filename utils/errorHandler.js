@@ -1,4 +1,4 @@
-// puls-academy-backend/utils/errorHandler.js
+
 
 const errorHandler = (err, req, res, next) => {
     console.error(err.stack);
@@ -10,10 +10,9 @@ const errorHandler = (err, req, res, next) => {
         });
     }
 
-    //
-    // ✨ التعديل الرئيسي: التعامل مع أخطاء PostgreSQL
-    //
-    if (err.code === '23505') { // 23505 is the code for unique_violation in PostgreSQL
+
+
+    if (err.code === '23505') { 
         return res.status(400).json({
             error: 'هذه البيانات موجودة بالفعل'
         });
