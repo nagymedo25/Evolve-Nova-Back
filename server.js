@@ -22,7 +22,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 
 const corsOptions = {
-  origin: ['https://evolve1-nova.vercel.app', 'http://localhost:5001'], 
+  origin: ['https://evolve-nova.vercel.app', 'http://localhost:5001'], 
   credentials: true, 
 };
 app.use(cors(corsOptions));
